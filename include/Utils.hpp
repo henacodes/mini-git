@@ -5,7 +5,8 @@
 #include <random>
 #include <string>
 #include <chrono>
-#include <format>
+#include <iomanip>
+#include <sstream>
 
 namespace Utils {
 
@@ -34,11 +35,29 @@ namespace Utils {
     }
 
     static std::string get_formatted_date_time_from_utc(std::chrono::system_clock::time_point time) {
-        return std::format("{:%Y-%m-%d %H:%M:%S}", time);
+        std::time_t t = std::chrono::system_clock::to_time_t(time);
+        std::tm tm{};
+    #if defined(_WIN32)
+        gmtime_s(&tm, &t);
+    #else
+        gmtime_r(&t, &tm);
+    #endif
+        std::ostringstream oss;
+        oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+        return oss.str();
     }
 
     static std::string get_db_iso_string() {
-        return std::format("{:%FT%TZ}", std::chrono::system_clock::now());
+        std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        std::tm tm{};
+    #if defined(_WIN32)
+        gmtime_s(&tm, &t);
+    #else
+        gmtime_r(&t, &tm);
+    #endif
+        std::ostringstream oss;
+        oss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+        return oss.str();
     }
 }
 

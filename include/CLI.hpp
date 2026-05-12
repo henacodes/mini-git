@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <filesystem>
 
 #include"CommitHandler.hpp"
 #include"FileSystem.hpp"
@@ -10,7 +11,11 @@
 using namespace std;
 
 namespace CLI {
-    DatabaseManager db(".mgit/minigit.db");
+    inline const std::string DB_PATH = ".mgit/minigit.db";
+
+    inline bool isRepoInitialized() {
+        return FileSystem::folder_already_exists(FileSystem::REPO_FOLDER) && std::filesystem::exists(DB_PATH);
+    }
 
     void printHelp(){
         cout<<"\n minigit- A Simple Version Control System \n";
@@ -31,11 +36,29 @@ namespace CLI {
          string command = argv[1];
 
          if(command =="init"){
-            FileSystem::initialize_folders(); 
-            CommitHandler::handleInit(db); 
+            FileSystem::initialize_folders();
+
+                DatabaseManager db(DB_PATH);
+                if (db.getHandle() == nullptr) {
+                cout << "Error: could not open database.\n";
+                return;
+            }
+
+                CommitHandler::handleInit(db);
             cout<<"intialized empty minigit repository.\n";
          }
          else if(command == "commit"){
+
+            if (!isRepoInitialized()) {
+                cout << "Error: repository not initialized. Run 'minigit init' first.\n";
+                return;
+            }
+
+            DatabaseManager db(DB_PATH);
+            if (db.getHandle() == nullptr) {
+                cout << "Error: could not open database.\n";
+                return;
+            }
 
             if(argc < 4){
                 cout<<"Error: commit requires a messsage. \n";
@@ -58,7 +81,7 @@ namespace CLI {
         commit.author    = "Unknown";
         commit.timestamp = Utils::get_db_iso_string(); 
         
-        CommitResponse result = CommitHandler::handleCommit(db, commit);
+        CommitHandler::CommitResponse result = CommitHandler::handleCommit(db, commit);
 
             if(result.success){
                 cout<<"Snapshot saved. Commit ID: "<<commitID<<"\n";
@@ -66,10 +89,32 @@ namespace CLI {
                 cout<<"Error: "<<result.message<<"\n";
             }
          }else if(command=="log"){
+
+          if (!isRepoInitialized()) {
+              cout << "Error: repository not initialized. Run 'minigit init' first.\n";
+              return;
+          }
+
+          DatabaseManager db(DB_PATH);
+          if (db.getHandle() == nullptr) {
+              cout << "Error: could not open database.\n";
+              return;
+          }
            
           CommitHandler::handleLog(db); 
        
         }else if(command=="restore"){ 
+
+            if (!isRepoInitialized()) {
+                cout << "Error: repository not initialized. Run 'minigit init' first.\n";
+                return;
+            }
+
+            DatabaseManager db(DB_PATH);
+            if (db.getHandle() == nullptr) {
+                cout << "Error: could not open database.\n";
+                return;
+            }
 
             if(argc < 3){
                 cout<<"Error: restore requires a commit ID.\n";
